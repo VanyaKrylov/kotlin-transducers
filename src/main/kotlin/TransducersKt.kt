@@ -19,9 +19,8 @@ fun <R,T> foldl(arr: Collection<T>, start: R, f: (R, T) -> R): R {
     return acc
 }
 
-//fun <>mapping(in: Transducer)
 fun <R,T> map(arr: Collection<T>, f: (T) -> R,): Collection<R> =
-    foldl(arr, emptyList(),) { acc, el -> acc.plus(f(el)) }          // return reduce(arr) { r: Collection<R>?, t -> r?.plus(f(t)) ?: listOf(f(t)) }
+    foldl(arr, emptyList(),) { acc, el -> acc.plus(f(el)) }
 
 fun <R,A,T> mapping(f: (R) -> T) =
     { step: Reducer<A,T> ->
@@ -32,5 +31,7 @@ fun Int.showDoubledString() = (this * this).toString()
 
 fun main() {
     val list = listOf(1,2,3)
-    println(map(list) {it.showDoubledString()})
+    println("Casual: ${map(list) { it.showDoubledString() }}")
+    val foo = mapping<Int,List<String>,String>(Int::showDoubledString).invoke(List<String>::plus)
+    println("Transduced: ${foldl(list, emptyList(), foo)}")
 }
