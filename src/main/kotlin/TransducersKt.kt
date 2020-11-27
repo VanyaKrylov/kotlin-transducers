@@ -22,14 +22,14 @@ fun <R,T> foldl(arr: Collection<T>, start: R, f: (R, T) -> R): R {
 fun <R,T> map(arr: Collection<T>, f: (T) -> R,): Collection<R> =
     foldl(arr, emptyList(),) { acc, el -> acc.plus(f(el)) }
 
-inline fun <Acc,T_in,T_out> mapping(crossinline f: (T_out) -> T_in) =
+inline fun <Acc,T_in,T_out> mapping(crossinline f: (T_out) -> T_in): Transducer<Acc,T_in,T_out> =
     { step: Reducer<Acc,T_in> ->
         { acc: Acc, arg: T_out -> step(acc, f(arg)) }}
 
-inline fun <T_in,T_out> List<T_out>.mapT(crossinline f: (T_out) -> T_in): List<T_in> {
-    val result = mutableListOf<T_in>()
+inline fun <In,Out> List<In>.mapT(crossinline f: (In) -> Out): List<Out> {
+    val result = mutableListOf<Out>()
     for (el in this) {
-        (mapping<MutableList<T_in>,T_in,T_out>(f))(::conj).invoke(result, el)
+        (mapping<MutableList<Out>,Out,In>(f))(::conj).invoke(result, el)
     }
     return result
 }
@@ -46,4 +46,6 @@ fun main() {
         .invoke(List<String>::plus)
     println("Transduced: ${foldl(list, emptyList(), foo)}")
     println("Ext fun: ${list.mapT { it.showDoubledString() }}")
+
+    //TransducerContext<MutableList<String>>(::conj)
 }
