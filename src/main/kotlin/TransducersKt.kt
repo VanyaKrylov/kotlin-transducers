@@ -41,11 +41,23 @@ fun Int.showDoubledString() = (this * this).toString()
 
 fun main() {
     val list = listOf(1,2,3)
-    println("Casual: ${map(list) { it.showDoubledString() }}")
+    val list2 = list.map { it.showDoubledString() }
+        .filter { it.startsWith("4") }
+
+//    println("Casual: ${ map(list) { it.showDoubledString() } }")
+    println("Casual: ${list2}")
     val foo = mapping<List<String>,String,Int>(Int::showDoubledString)
         .invoke(List<String>::plus)
     println("Transduced: ${foldl(list, emptyList(), foo)}")
     println("Ext fun: ${list.mapT { it.showDoubledString() }}")
 
-    //TransducerContext<MutableList<String>>(::conj)
+    val transducerContext = TransducerContext<MutableList<String>> { a, b -> conj(a, b) }
+    val transducerChain = transducerContext.ctx {
+        mapping<String,Int> { v -> v.showDoubledString() }(
+            filtering<String> { v -> v.startsWith("4") }(step))
+    }
+    println("Transduced new: ${foldl(list, mutableListOf(), transducerChain)}")
+    /*val pairedList: List<Pair<Int,String>> = listOf(1 to "a", 2 to "b", 3 to "see")
+    pairedList.flatMap { listOf(it.first.toString(),it.second) }*/
+
 }
