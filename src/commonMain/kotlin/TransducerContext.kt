@@ -28,11 +28,9 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
                         acc
                     }
                     else if (count == n) {
-//                        count++
                         exit = true
                         step(acc, arg)
                     } else {
-//                        count++
                         step(acc, arg)
                     }}}
     }
@@ -47,19 +45,6 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
                     acc
                 }}
     }
-
-    /*fun main() {
-
-        ctx {
-            mapping<String,Int> { v -> v.showDoubledString() }(filtering<String> { v -> v.startsWith("4") }(step))
-        }
-    }*/
-
-
-
-    /*inline fun <T> statefulFiltering(crossinline pred: (T) -> Boolean) {
-        step = { acc: Recv, arg: Any? -> if (pred((arg as T))) step(acc,arg) else acc }
-    }*/
 
     inline fun <In,Out> transduce(arr: List<In>, start: Out, reducer: Reducer<Out,In>): Out {
         var acc = start
