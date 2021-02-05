@@ -1,5 +1,3 @@
-rootProject.name = "transducers"
-
 pluginManagement {
     repositories {
         maven(url = "https://dl.bintray.com/kotlin/kotlinx")
@@ -7,3 +5,6 @@ pluginManagement {
     }
 }
 
+rootProject.name = "kotlin-transducers"
+include("core")
+include("benchmark")
