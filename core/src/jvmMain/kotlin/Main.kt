@@ -38,9 +38,9 @@ fun main() {
 
     val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a, b)}
     val chain = ctxBuilder.ctx {
-        mapFlatting<Char, String> { it.toList() }(
-            mapping<Int, Char> { it.toInt() }(
-                filtering<Int> { it > 3 }(
+        mapFlatting { s: String -> s.toList() }(
+            mapping { el: Char -> el.toInt() }(
+                filtering { el: Int -> el > 3 }(
                     step
                 )
             )
