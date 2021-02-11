@@ -28,7 +28,7 @@ open class TestBenchmark {
         rangeList = IntRange(0, 1000).toList()
     }
 
-    @Benchmark
+    /*@Benchmark
     fun trivialTransducer(): List<String> {
         val transducerContext = TransducerContext<MutableList<String>,Int,String> { a, b -> conj(a, b) }
         val transducerChain = transducerContext.ctx {
@@ -50,7 +50,7 @@ open class TestBenchmark {
             .filter { !it.startsWith("3") }
             .take(2)
             .toList()
-    }
+    }*/
 
     /*@Benchmark
     fun trivialStandard(): List<String> {
@@ -61,7 +61,7 @@ open class TestBenchmark {
             .take(2)
     }*/
 
-    @Benchmark
+/*    @Benchmark
     fun flatMapTransducer(): List<Int> {
         val transCtx = TransducerContext<MutableList<Int>,Iterable<Int>,Int> { a, b -> conj(a, b) }
         val transChain = transCtx.ctx {
@@ -82,7 +82,7 @@ open class TestBenchmark {
             .map { it * 10 }
             .take(8)
             .toList()
-    }
+    }*/
 
 
     /*@Benchmark
@@ -121,6 +121,22 @@ open class TestBenchmark {
             .toList()
     }
 
+    @Benchmark
+    fun mapFlatHandInlined(): List<Int> {
+        val exit = false
+        val acc = mutableListOf<Int>()
+        for (e in strList) { // -> transduce
+            if (exit) break // -> mapFlatting
+            for (ee in e.toList()) {
+                if (exit) break
+                if (ee.toInt() > 3)
+                    acc.apply { this.add(ee.toInt()) }
+            }
+        }
+
+        return acc
+    }
+
     /*@Benchmark
     fun mapFlat(): List<Int> {
 
@@ -134,7 +150,7 @@ open class TestBenchmark {
     fun empty() {
     }*/
 
-    @Benchmark
+    /*@Benchmark
     fun notSoHeavyCozTransduced(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a,b) }
         val execChain = ctxBuilder.ctx {
@@ -160,7 +176,7 @@ open class TestBenchmark {
             .filter { it % 2 == 0 }
             .take(80)
             .toList()
-    }
+    }*/
 
     /*@Benchmark
     fun heavyStd() : List<Int> {
@@ -173,7 +189,7 @@ open class TestBenchmark {
             .take(80)
     }*/
 
-    @Benchmark //avg 163.5 ops/ms
+   /* @Benchmark //avg 163.5 ops/ms
     fun simpleTrans(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, Int, Int> { a, b -> conj(a, b)}
         val execChain = ctxBuilder.ctx {
@@ -193,5 +209,5 @@ open class TestBenchmark {
             .filter { it % 3 == 0 }
             .take(1000)
             .toList()
-    }
+    }*/
 }

@@ -60,10 +60,10 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
     }
 
     inline fun <In,Out> transduce(arr: List<In>, start: Out, reducer: Reducer<Out,In>): Out {
-        var acc = start
+        val acc = start
         for (e in arr) {
             if (exit) break
-            acc = reducer(acc, e)
+            reducer(acc, e)
         }
 
         return acc

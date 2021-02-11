@@ -49,8 +49,20 @@ fun main() {
 
     val trnsRes = ctxBuilder.transduce(strList, mutableListOf(), chain)
 
+    val exit = false
+    val acc = mutableListOf<Int>()
+    for (e in strList) { // -> transduce
+        if (exit) break // -> mapFlatting
+            for (ee in e.toList()) {
+                if (exit) break
+                if (ee.toInt() > 3)
+                    acc.apply { this.add(ee.toInt()) }
+        }
+    }
+
     println("""
         Standard: ${stdRes}
         Transduced: ${trnsRes}
+        Hand-inlined: ${acc}
     """.trimIndent())
 }
