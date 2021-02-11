@@ -16,12 +16,16 @@ open class TestBenchmark {
     lateinit var list: List<Int>
     lateinit var listList: List<List<Int>>
     lateinit var strList: List<String>
+    lateinit var seq: Sequence<Int>
+    lateinit var rangeList: List<Int>
 
     @Setup
     fun setup() {
         list = listOf(1,2,3)
         listList = listOf(listOf(1,2,3), listOf(4,5,6), listOf(7,8,9))
         strList = listOf("123", "456", "78")
+        seq = IntRange(0, 1000).asSequence()
+        rangeList = IntRange(0, 1000).toList()
     }
 
     @Benchmark
@@ -38,6 +42,26 @@ open class TestBenchmark {
     }
 
     @Benchmark
+    fun trivialSequence(): List<String> {
+
+        return list
+            .asSequence()
+            .map { it.showDoubledString() }
+            .filter { !it.startsWith("3") }
+            .take(2)
+            .toList()
+    }
+
+    /*@Benchmark
+    fun trivialStandard(): List<String> {
+
+        return list
+            .map { it.showDoubledString() }
+            .filter { !it.startsWith("3") }
+            .take(2)
+    }*/
+
+    @Benchmark
     fun flatMapTransducer(): List<Int> {
         val transCtx = TransducerContext<MutableList<Int>,Iterable<Int>,Int> { a, b -> conj(a, b) }
         val transChain = transCtx.ctx {
@@ -50,33 +74,28 @@ open class TestBenchmark {
     }
 
     @Benchmark
-    fun trivialStandard(): List<String> {
+    fun flatMapSequence(): List<Int> {
 
-        return list
-            .map { it.showDoubledString() }
-            .filter { !it.startsWith("3") }
-            .take(2)
+        return listList
+            .asSequence()
+            .flatten()
+            .map { it * 10 }
+            .take(8)
+            .toList()
     }
 
-    @Benchmark
+
+    /*@Benchmark
     fun flatMapStandard() : List<Int> {
+
         return listList
             .flatten()
             .map { it * 10 }
             .take(8)
-    }
+    }*/
 
     @Benchmark
-    fun mapFlat() : List<Int> {
-
-        return strList
-            .flatMap { it.toList() }
-            .map { it.toInt() }
-            .filter { it > 3 }
-    }
-
-    @Benchmark
-    fun mapFlatting() : List<Int> {
+    fun mapFlatting(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a, b)}
         val chain = ctxBuilder.ctx {
             mapFlatting { s: String -> s.toList() }(
@@ -92,17 +111,31 @@ open class TestBenchmark {
     }
 
     @Benchmark
-    fun heavyStd() : List<Int> {
+    fun mapFlatSeq(): List<Int> {
+
+        return strList
+            .asSequence()
+            .flatMap { it.toList() }
+            .map { it.toInt() }
+            .filter { it > 3 }
+            .toList()
+    }
+
+    /*@Benchmark
+    fun mapFlat(): List<Int> {
+
         return strList
             .flatMap { it.toList() }
             .map { it.toInt() }
-            .flatMap { IntRange(0, it * 10) }
-            .filter { it % 2 == 0 }
-            .take(80)
-    }
+            .filter { it > 3 }
+    }*/
+
+    /*@Benchmark
+    fun empty() {
+    }*/
 
     @Benchmark
-    fun notSoHeavyCozTransduced() : List<Int> {
+    fun notSoHeavyCozTransduced(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a,b) }
         val execChain = ctxBuilder.ctx {
             mapFlatting { el: String -> el.toList() }(
@@ -114,5 +147,51 @@ open class TestBenchmark {
         }
 
         return ctxBuilder.transduce(strList, mutableListOf(), execChain)
+    }
+
+    @Benchmark
+    fun heavySequence(): List<Int> {
+
+        return strList
+            .asSequence()
+            .flatMap { it.toList() }
+            .map { it.toInt() }
+            .flatMap { IntRange(0, it * 10) }
+            .filter { it % 2 == 0 }
+            .take(80)
+            .toList()
+    }
+
+    /*@Benchmark
+    fun heavyStd() : List<Int> {
+
+        return strList
+            .flatMap { it.toList() }
+            .map { it.toInt() }
+            .flatMap { IntRange(0, it * 10) }
+            .filter { it % 2 == 0 }
+            .take(80)
+    }*/
+
+    @Benchmark //avg 163.5 ops/ms
+    fun simpleTrans(): List<Int> {
+        val ctxBuilder = TransducerContext<MutableList<Int>, Int, Int> { a, b -> conj(a, b)}
+        val execChain = ctxBuilder.ctx {
+            mapping { el: Int -> el * 2 }(
+                filtering { el: Int -> el % 3 ==0 }(
+                    taking<Int>(1000)(
+                        step)))
+        }
+
+        return ctxBuilder.transduce(rangeList, mutableListOf(), execChain)
+    }
+
+    @Benchmark // avg 134 ops/ms
+    fun simpleSeq(): List<Int> {
+        return seq
+            .map { it * 2 }
+            .filter { it % 3 == 0 }
+            .take(1000)
+            .toList()
     }
 }

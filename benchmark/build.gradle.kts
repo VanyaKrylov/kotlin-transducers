@@ -21,13 +21,13 @@ kotlin {
 
     js {
         nodejs()
-        browser {
+        /*browser {
             testTask {
                 useKarma {
                     usePhantomJS()
                 }
             }
-        }
+        }*/
     }
 
     sourceSets {
@@ -48,11 +48,11 @@ kotlin {
 }
 
 benchmark {
-    configurations {
+    /*configurations {
         named("main") {
             iterations = 20
         }
-    }
+    }*/
     targets {
         register("jvm")
         register("js")
