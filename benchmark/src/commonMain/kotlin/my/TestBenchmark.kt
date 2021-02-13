@@ -1,15 +1,15 @@
 package my
 
+import Reducer
 import TransducerContext
 import conj
 import kotlinx.benchmark.*
-import showDoubledString
 
 //TODO: sequence
 
 @State(Scope.Benchmark)
-@Warmup(10)
-@Measurement(iterations = 10)
+@Warmup(20)
+@Measurement(iterations = 20)
 @OutputTimeUnit(BenchmarkTimeUnit.MILLISECONDS)
 open class TestBenchmark {
 
@@ -18,6 +18,7 @@ open class TestBenchmark {
     lateinit var strList: List<String>
     lateinit var seq: Sequence<Int>
     lateinit var rangeList: List<Int>
+    lateinit var conjLambda: Reducer<MutableList<Int>, Int>
 
     @Setup
     fun setup() {
@@ -26,6 +27,7 @@ open class TestBenchmark {
         strList = listOf("123", "456", "78")
         seq = IntRange(0, 1000).asSequence()
         rangeList = IntRange(0, 1000).toList()
+        conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
     }
 
     /*@Benchmark
@@ -95,6 +97,44 @@ open class TestBenchmark {
     }*/
 
     @Benchmark
+    fun mapFlatLambdaHandInlined(): List<Int> {
+        val exit = false
+        val acc = mutableListOf<Int>()
+
+        for (e in strList) {
+            if (exit) break
+            { st: Reducer<MutableList<Int>, Int> -> {
+                    acc2: MutableList<Int>, arg2: String -> {
+                        for (ee in arg2.toList()) {
+                            if (exit) break
+                            {acc3: MutableList<Int>, arg3: Char -> {
+                                {acc4: MutableList<Int>, arg4: Int -> {
+                                    if (arg4 > 3)
+                                        st(acc4, arg4)
+                                    else
+                                        acc4
+                                }} (acc3, arg3.toInt()).invoke()
+                            }} (acc2, ee).invoke()
+                        }
+                    }}(acc, e)
+            }(conjLambda).invoke()
+        }
+
+        return acc
+    }
+
+    @Benchmark
+    fun mapFlatSeq(): List<Int> {
+
+        return strList
+            .asSequence()
+            .flatMap { it.toList() }
+            .map { it.toInt() }
+            .filter { it > 3 }
+            .toList()
+    }
+
+    @Benchmark
     fun mapFlatting(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a, b)}
         val chain = ctxBuilder.ctx {
@@ -108,17 +148,6 @@ open class TestBenchmark {
         }
 
         return ctxBuilder.transduce(strList, mutableListOf(), chain)
-    }
-
-    @Benchmark
-    fun mapFlatSeq(): List<Int> {
-
-        return strList
-            .asSequence()
-            .flatMap { it.toList() }
-            .map { it.toInt() }
-            .filter { it > 3 }
-            .toList()
     }
 
     @Benchmark

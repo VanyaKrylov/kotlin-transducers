@@ -1,6 +1,8 @@
 class Main {
 }
 
+val conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
+
 fun main() {
     val list = listOf(1, 2, 3)
     val list2 = list.map { it.showDoubledString() }
@@ -37,11 +39,11 @@ fun main() {
         .filter { it > 3 }
 
     val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a, b)}
-    val chain = ctxBuilder.ctx {
+    val chain = ctxBuilder.ctx { st ->
         mapFlatting { s: String -> s.toList() }(
             mapping { el: Char -> el.toInt() }(
                 filtering { el: Int -> el > 3 }(
-                    step
+                    st
                 )
             )
         )
@@ -60,9 +62,32 @@ fun main() {
         }
     }
 
+    val exit2 = false
+    val ac = mutableListOf<Int>()
+
+    for (e in strList) {
+        if (exit) break
+        ({ st: Reducer<MutableList<Int>, Int> -> {
+                acc2: MutableList<Int>, arg2: String -> {
+            for (ee in arg2.toList()) {
+                if (exit) break
+                {acc3: MutableList<Int>, arg3: Char -> {
+                    {acc4: MutableList<Int>, arg4: Int -> {
+                        if (arg4 > 3)
+                            st(acc4, arg4)
+                        else
+                            acc4
+                    }} (acc3, arg3.toInt()).invoke()
+                }} (acc2, ee).invoke()
+            }
+        }}(ac, e)
+        }(conjLambda)).invoke()
+    }
+
     println("""
         Standard: ${stdRes}
         Transduced: ${trnsRes}
         Hand-inlined: ${acc}
+        Hand lambda-inlined: ${ac}
     """.trimIndent())
 }
