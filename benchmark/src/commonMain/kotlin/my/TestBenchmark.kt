@@ -4,6 +4,7 @@ import Reducer
 import TransducerContext
 import conj
 import kotlinx.benchmark.*
+import showDoubledString
 
 //TODO: sequence
 
@@ -30,14 +31,14 @@ open class TestBenchmark {
         conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
     }
 
-    /*@Benchmark
+    @Benchmark
     fun trivialTransducer(): List<String> {
         val transducerContext = TransducerContext<MutableList<String>,Int,String> { a, b -> conj(a, b) }
-        val transducerChain = transducerContext.ctx {
+        val transducerChain = transducerContext.ctx { st ->
             mapping<String,Int> { v -> v.showDoubledString() }(
                 filtering<String> { v -> !v.startsWith("3") }(
                     taking<String>(2)(
-                        step))) //So Clojure, much smiley =)
+                        st))) //So Clojure, much smiley =)
         }
 
         return transducerContext.transduce(list, mutableListOf(), transducerChain)
@@ -52,24 +53,24 @@ open class TestBenchmark {
             .filter { !it.startsWith("3") }
             .take(2)
             .toList()
-    }*/
+    }
 
-    /*@Benchmark
+    @Benchmark
     fun trivialStandard(): List<String> {
 
         return list
             .map { it.showDoubledString() }
             .filter { !it.startsWith("3") }
             .take(2)
-    }*/
+    }
 
-/*    @Benchmark
+    @Benchmark
     fun flatMapTransducer(): List<Int> {
         val transCtx = TransducerContext<MutableList<Int>,Iterable<Int>,Int> { a, b -> conj(a, b) }
-        val transChain = transCtx.ctx {
+        val transChain = transCtx.ctx { st ->
             flatMapping<Int,Int> { el -> el*10 }(
                 taking<Int>(8)(
-                    step))
+                    st))
         }
 
         return transCtx.transduce(listList, mutableListOf(), transChain)
@@ -84,43 +85,16 @@ open class TestBenchmark {
             .map { it * 10 }
             .take(8)
             .toList()
-    }*/
+    }
 
 
-    /*@Benchmark
+    @Benchmark
     fun flatMapStandard() : List<Int> {
 
         return listList
             .flatten()
             .map { it * 10 }
             .take(8)
-    }*/
-
-    @Benchmark
-    fun mapFlatLambdaHandInlined(): List<Int> {
-        val exit = false
-        val acc = mutableListOf<Int>()
-
-        for (e in strList) {
-            if (exit) break
-            { st: Reducer<MutableList<Int>, Int> -> {
-                    acc2: MutableList<Int>, arg2: String -> {
-                        for (ee in arg2.toList()) {
-                            if (exit) break
-                            {acc3: MutableList<Int>, arg3: Char -> {
-                                {acc4: MutableList<Int>, arg4: Int -> {
-                                    if (arg4 > 3)
-                                        st(acc4, arg4)
-                                    else
-                                        acc4
-                                }} (acc3, arg3.toInt()).invoke()
-                            }} (acc2, ee).invoke()
-                        }
-                    }}(acc, e)
-            }(conjLambda).invoke()
-        }
-
-        return acc
     }
 
     @Benchmark
@@ -151,6 +125,33 @@ open class TestBenchmark {
     }
 
     @Benchmark
+    fun mapFlatLambdaHandInlined(): List<Int> {
+        val exit = false
+        val acc = mutableListOf<Int>()
+
+        for (e in strList) {
+            if (exit) break
+            { st: Reducer<MutableList<Int>, Int> -> {
+                    acc2: MutableList<Int>, arg2: String -> {
+                for (ee in arg2.toList()) {
+                    if (exit) break
+                    {acc3: MutableList<Int>, arg3: Char -> {
+                        {acc4: MutableList<Int>, arg4: Int -> {
+                            if (arg4 > 3)
+                                st(acc4, arg4)
+                            else
+                                acc4
+                        }} (acc3, arg3.toInt()).invoke()
+                    }} (acc2, ee).invoke()
+                }
+            }}(acc, e)
+            }(conjLambda).invoke()
+        }
+
+        return acc
+    }
+
+    @Benchmark
     fun mapFlatHandInlined(): List<Int> {
         val exit = false
         val acc = mutableListOf<Int>()
@@ -166,29 +167,29 @@ open class TestBenchmark {
         return acc
     }
 
-    /*@Benchmark
+    @Benchmark
     fun mapFlat(): List<Int> {
 
         return strList
             .flatMap { it.toList() }
             .map { it.toInt() }
             .filter { it > 3 }
-    }*/
+    }
 
     /*@Benchmark
     fun empty() {
     }*/
 
-    /*@Benchmark
+    @Benchmark
     fun notSoHeavyCozTransduced(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, String, Int> { a, b -> conj(a,b) }
-        val execChain = ctxBuilder.ctx {
+        val execChain = ctxBuilder.ctx { st ->
             mapFlatting { el: String -> el.toList() }(
                 mapping { el: Char -> el.toInt() }(
                     mapFlatting { el: Int -> IntRange(0, el * 10) }(
                         filtering { el: Int -> el % 2 == 0 }(
                             taking<Int>(80)(
-                                step)))))
+                                st)))))
         }
 
         return ctxBuilder.transduce(strList, mutableListOf(), execChain)
@@ -205,9 +206,9 @@ open class TestBenchmark {
             .filter { it % 2 == 0 }
             .take(80)
             .toList()
-    }*/
+    }
 
-    /*@Benchmark
+    @Benchmark
     fun heavyStd() : List<Int> {
 
         return strList
@@ -216,16 +217,16 @@ open class TestBenchmark {
             .flatMap { IntRange(0, it * 10) }
             .filter { it % 2 == 0 }
             .take(80)
-    }*/
+    }
 
-   /* @Benchmark //avg 163.5 ops/ms
+    @Benchmark //avg 163.5 ops/ms
     fun simpleTrans(): List<Int> {
         val ctxBuilder = TransducerContext<MutableList<Int>, Int, Int> { a, b -> conj(a, b)}
-        val execChain = ctxBuilder.ctx {
+        val execChain = ctxBuilder.ctx { st ->
             mapping { el: Int -> el * 2 }(
                 filtering { el: Int -> el % 3 ==0 }(
                     taking<Int>(1000)(
-                        step)))
+                        st)))
         }
 
         return ctxBuilder.transduce(rangeList, mutableListOf(), execChain)
@@ -238,5 +239,5 @@ open class TestBenchmark {
             .filter { it % 3 == 0 }
             .take(1000)
             .toList()
-    }*/
+    }
 }
