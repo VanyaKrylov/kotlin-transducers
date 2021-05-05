@@ -1,5 +1,12 @@
 val conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
 
+fun <In> TransducerContext2<MutableList<Int>,String>.customTransducer(): Transducer<MutableList<Int>,In,In> =
+    { step: Reducer<MutableList<Int>,In> ->
+        { acc: MutableList<Int>, el: In ->
+            exit = true
+            acc
+        }}
+
 fun main() {
     val list = listOf(1, 2, 3)
    /* val listList = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))
@@ -24,13 +31,41 @@ fun main() {
 
     val res = list
         .transduce(mutableListOf<String>(), TransducerContext2 {
-        mapping<String, Int> { v -> v.showDoubledString() } (
-        filtering<String> { v -> !v.startsWith("3") }(
-        taking<String>(2) () { a, b ->
-        conj(a, b)
-    }))})
+            mapping<String, Int> { v -> v.showDoubledString() } (
+            filtering<String> { v -> !v.startsWith("3") }(
+            taking<String>(2) () { a, b ->
+            conj(a, b)
+        }))})
+
+    val customTransducer: Transducer<MutableList<Int>,Int,Int> =
+    { step: Reducer<MutableList<Int>,Int> ->
+        { acc: MutableList<Int>, el: Int ->
+            acc
+        }}
+
+    val res2 = listOf("123", "456", "78")
+        .transduce(mutableListOf<Int>(), TransducerContext2 {
+            mapFlatting { el: String -> el.toList() }(
+            mapping { el: Char -> el.toInt() }(
+            mapFlatting { el: Int -> IntRange(0, el * 10) }(
+            filtering { el: Int -> el % 2 == 0 }(
+            taking<Int>(80)(
+            customTransducer<Int>()(
+            ::toListt)
+        )))))})
+
+    val expected2 = listOf("123", "456", "78")
+        .flatMap { it.toList() }
+        .map { it.toInt() }
+        .flatMap { IntRange(0, it * 10) }
+        .filter { it % 2 == 0 }
+        .take(80)
 
     println("Hooray! Res= ${res}")
+    println("""
+        Actual Res2: ${res2}
+        Exprected:   ${expected2}
+    """.trimIndent())
 
     val transducerChain = transducerContext.ctx {
         mapping<String, Int> { v -> v.showDoubledString() } (

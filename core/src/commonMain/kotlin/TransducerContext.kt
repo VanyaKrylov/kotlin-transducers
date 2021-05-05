@@ -80,7 +80,7 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
     }
 }
 
-class TransducerContext2<Recv,In>(val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
+class TransducerContext2<Recv,In> @SuperInline constructor(val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
     var exit: Boolean = false
 
     inline fun <T_in,T_out> mapping(crossinline f: (T_out) -> T_in): Transducer<Recv,T_in,T_out> =
@@ -146,15 +146,19 @@ class TransducerContext2<Recv,In>(val chain: TransducerContext2<Recv,In>.() -> R
 
 }
 
-fun <In, Recv> List<In>.transduce(start: Recv, ctx: TransducerContext2<Recv, In>): Recv {
+inline fun <In, Recv> List<In>.transduce(initial: Recv, ctx: TransducerContext2<Recv, In>): Recv {
     val reducer = ctx.chain(ctx)
     for (e in this) {
         if (ctx.exit) break
-        reducer(start, e)
+        reducer(initial, e)
     }
 
-    return start
+    return initial
 }
+
+inline fun <In,Recv> TransducerContext2<MutableList<Recv>,In>.toList(acc: MutableList<Recv>, v: Recv) = acc.apply { this.add(v) }
+
+inline fun <Recv> toListt(acc: MutableList<Recv>, v: Recv) = acc.apply { this.add(v) }
 
 fun <R,T> reduce(arr: Collection<T>, f: (R?,T) -> R): R {
     var acc: R? = null
