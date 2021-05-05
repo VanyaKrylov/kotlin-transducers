@@ -1,15 +1,25 @@
 typealias Reducer<T,R> = (T, R) -> T
 typealias Transducer<Acc,T_in,T_out> = (Reducer<Acc,T_in>) -> Reducer<Acc,T_out>
 
+//@Retention(AnnotationRetention.BINARY)
+annotation class SuperInline
+
 class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially step is the terminating reduce function of the chain
 
     var exit: Boolean = false
 
+    @SuperInline
     inline fun ctx(
-        apply: TransducerContext<Recv,In,Out>.(Reducer<Recv,Out>) -> Reducer<Recv,In>
+        @SuperInline apply: TransducerContext<Recv,In,Out>.(Reducer<Recv,Out>) -> Reducer<Recv,In>
     ): Reducer<Recv, In> =
         this.apply(step)
 
+    inline fun ctx2(
+        @SuperInline apply: TransducerContext<Recv,In,Out>.() -> Reducer<Recv,In>
+    ): Reducer<Recv, In> =
+        this.apply()
+
+    @SuperInline
     inline fun <T_in,T_out> mapping(crossinline f: (T_out) -> T_in): Transducer<Recv,T_in,T_out> =
         { step: Reducer<Recv,T_in> ->
             { acc: Recv, arg: T_out -> step(acc, f(arg)) }}
@@ -70,7 +80,83 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
     }
 }
 
-    fun <R,T> reduce(arr: Collection<T>, f: (R?,T) -> R): R {
+class TransducerContext2<Recv,In>(val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
+    var exit: Boolean = false
+
+    inline fun <T_in,T_out> mapping(crossinline f: (T_out) -> T_in): Transducer<Recv,T_in,T_out> =
+        { step: Reducer<Recv,T_in> ->
+            { acc: Recv, arg: T_out -> step(acc, f(arg)) }}
+
+    inline fun <T> filtering(crossinline pred: (T) -> Boolean): Transducer<Recv,T,T> =
+        { step: Reducer<Recv,T> ->
+            { acc: Recv, arg: T ->
+                if (pred(arg))
+                    step(acc,arg)
+                else
+                    acc }}
+
+    inline fun <T> taking(n: Int): Transducer<Recv,T,T> {
+        var count = 0
+        return { step: Reducer<Recv,T> ->
+            { acc: Recv, arg: T ->
+                count++
+                if (count > n) {
+                    acc
+                }
+                else if (count == n) {
+                    exit = true
+                    step(acc, arg)
+                } else {
+                    step(acc, arg)
+                }}}
+    }
+
+    inline fun <T_in,T_out> flatMapping(crossinline f: (T_out) -> T_in): Transducer<Recv,T_in,Iterable<T_out>> {
+        return { step: Reducer<Recv,T_in> ->
+            { acc: Recv, arg: Iterable<T_out> ->
+                for (e in arg) {
+                    if (exit) break
+                    mapping(f)(step)(acc,e)
+                }
+                acc }}
+    }
+
+    //Does actually behave as casual flatMap from stdlib
+    inline fun <T_in,T_out> mapFlatting(crossinline f: (T_out) -> Iterable<T_in>): Transducer<Recv,T_in,T_out> {
+        return { step: Reducer<Recv,T_in> ->
+            { acc: Recv, arg: T_out ->
+                for (e in f(arg)) {
+                    if (exit) break
+                    step(acc, e)
+                }
+                acc }}
+    }
+
+    /*fun <In> List<In>.trasduce(start: Recv): (TransducerContext2<Recv>.() -> Reducer<Recv,In>) -> Recv {
+        return { chain: TransducerContext2<Recv>.() -> Reducer<Recv,In> ->
+            val acc = start
+            for (e in this) {
+                if (exit) break
+                this@TransducerContext2.chain()(acc, e)
+            }
+
+            acc
+        }
+    }*/
+
+}
+
+fun <In, Recv> List<In>.transduce(start: Recv, ctx: TransducerContext2<Recv, In>): Recv {
+    val reducer = ctx.chain(ctx)
+    for (e in this) {
+        if (ctx.exit) break
+        reducer(start, e)
+    }
+
+    return start
+}
+
+fun <R,T> reduce(arr: Collection<T>, f: (R?,T) -> R): R {
     var acc: R? = null
     for (e in arr) {
         acc = f(acc, e)

@@ -1,19 +1,39 @@
-class Main {
-}
-
 val conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
 
 fun main() {
     val list = listOf(1, 2, 3)
-    val listList = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))
+   /* val listList = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))
     val strList = listOf("123", "456", "78")
     val list2 = list.map { it.showDoubledString() }
         .filter { it.startsWith("4") }
         .take(0)
+*/
+   fun <T> conj(acc: MutableList<T>, el: T): MutableList<T> =
+       acc.apply { this.add(el) }
+    val transducerContext = TransducerContext<MutableList<String>, Int, String> { a, b -> conj(a, b) }
 
-    /*val transducerContext = TransducerContext<MutableList<String>, Int, String> { a, b -> conj(a, b) }
+    val transChain2 = transducerContext.ctx2 {
+        mapping<String, Int> { v -> v.showDoubledString() } (
+            filtering<String> { v -> !v.startsWith("3") }(
+                taking<String>(2) () { a, b ->
+                    conj(a, b)
+                }
+            )
+        )
+    }
+
+    val res = list
+        .transduce(mutableListOf<String>(), TransducerContext2 {
+        mapping<String, Int> { v -> v.showDoubledString() } (
+        filtering<String> { v -> !v.startsWith("3") }(
+        taking<String>(2) () { a, b ->
+        conj(a, b)
+    }))})
+
+    println("Hooray! Res= ${res}")
+
     val transducerChain = transducerContext.ctx {
-        mapping<String, Int> { v -> v.showDoubledString() }(
+        mapping<String, Int> { v -> v.showDoubledString() } (
             filtering<String> { v -> !v.startsWith("3") }(
                 taking<String>(2)(
                     step
@@ -21,8 +41,9 @@ fun main() {
             )
         ) //So Clojure, much smiley =)
     }
-    println("Transduced new: ${transducerContext.transduce(list, mutableListOf(), transducerChain)}")
+    println("Transduced new: ${transducerContext.transduce(list, mutableListOf(), transChain2)}")
 
+    /*
     val transCtx = TransducerContext<MutableList<Int>, Iterable<Int>, Int> { a, b -> conj(a, b) }
     val transChain = transCtx.ctx {
         flatMapping<Int, Int> { el -> el * 10 }(
@@ -86,7 +107,7 @@ fun main() {
     }
  */
 
-    val expected =  strList
+    /*val expected =  strList
         .flatMap { it.toList() }
         .map { it.toInt() }
         .flatMap { IntRange(0, it * 10) }
@@ -137,7 +158,7 @@ fun main() {
     println("""
          1: ${expected}
          2: ${acc}
-    """.trimIndent())
+    """.trimIndent())*/
 
     /*println("""
         Standard: ${stdRes}
