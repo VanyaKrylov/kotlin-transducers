@@ -80,7 +80,7 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
     }
 }
 
-class TransducerContext2<Recv,In> @SuperInline constructor(val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
+class TransducerContext2<Recv,In> {//@SuperInline constructor(@SuperInline val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
     var exit: Boolean = false
 
     inline fun <T_in,T_out> mapping(crossinline f: (T_out) -> T_in): Transducer<Recv,T_in,T_out> =
@@ -131,22 +131,9 @@ class TransducerContext2<Recv,In> @SuperInline constructor(val chain: Transducer
                 }
                 acc }}
     }
-
-    /*fun <In> List<In>.trasduce(start: Recv): (TransducerContext2<Recv>.() -> Reducer<Recv,In>) -> Recv {
-        return { chain: TransducerContext2<Recv>.() -> Reducer<Recv,In> ->
-            val acc = start
-            for (e in this) {
-                if (exit) break
-                this@TransducerContext2.chain()(acc, e)
-            }
-
-            acc
-        }
-    }*/
-
 }
 
-inline fun <In, Recv> List<In>.transduce(initial: Recv, ctx: TransducerContext2<Recv, In>): Recv {
+/*inline fun <In, Recv> List<In>.transduce(initial: Recv, ctx: TransducerContext2<Recv, In>): Recv {
     val reducer = ctx.chain(ctx)
     for (e in this) {
         if (ctx.exit) break
@@ -154,11 +141,20 @@ inline fun <In, Recv> List<In>.transduce(initial: Recv, ctx: TransducerContext2<
     }
 
     return initial
+}*/
+
+inline fun <In,Recv> List<In>.transduceWithLazyLoadedChain(initial: Recv, operatorChainSupplier: (TransducerContext2<Recv,In>) -> Reducer<Recv,In>): Recv {
+    val ctx = TransducerContext2<Recv,In>()
+    val operatorChainReducer = operatorChainSupplier(ctx)
+    for (e in this) {
+        if (ctx.exit) break
+        operatorChainReducer(initial, e)
+    }
+
+    return initial
 }
 
-inline fun <In,Recv> TransducerContext2<MutableList<Recv>,In>.toList(acc: MutableList<Recv>, v: Recv) = acc.apply { this.add(v) }
-
-inline fun <Recv> toListt(acc: MutableList<Recv>, v: Recv) = acc.apply { this.add(v) }
+inline fun <Recv> toList(acc: MutableList<Recv>, v: Recv) = acc.apply { this.add(v) }
 
 fun <R,T> reduce(arr: Collection<T>, f: (R?,T) -> R): R {
     var acc: R? = null

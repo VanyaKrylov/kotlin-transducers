@@ -7,6 +7,15 @@ fun <In> TransducerContext2<MutableList<Int>,String>.customTransducer(): Transdu
             acc
         }}
 
+fun <In> customTransducer(): Transducer<MutableList<Int>,In,In> =
+    { step: Reducer<MutableList<Int>,In> ->
+        { acc: MutableList<Int>, el: In ->
+            acc
+        }}
+
+
+fun TransducerContext2<MutableList<Int>,Int>.testtt() = customTransducer<Int>().invoke() { a, b -> toList(a, b)}
+
 fun main() {
     val list = listOf(1, 2, 3)
    /* val listList = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))
@@ -29,13 +38,13 @@ fun main() {
         )
     }
 
-    val res = list
+    /*val res = list
         .transduce(mutableListOf<String>(), TransducerContext2 {
             mapping<String, Int> { v -> v.showDoubledString() } (
             filtering<String> { v -> !v.startsWith("3") }(
             taking<String>(2) () { a, b ->
             conj(a, b)
-        }))})
+        }))})*/
 
     val customTransducer: Transducer<MutableList<Int>,Int,Int> =
     { step: Reducer<MutableList<Int>,Int> ->
@@ -43,7 +52,7 @@ fun main() {
             acc
         }}
 
-    val res2 = listOf("123", "456", "78")
+    /*val res2 = listOf("123", "456", "78")
         .transduce(mutableListOf<Int>(), TransducerContext2 {
             mapFlatting { el: String -> el.toList() }(
             mapping { el: Char -> el.toInt() }(
@@ -51,8 +60,24 @@ fun main() {
             filtering { el: Int -> el % 2 == 0 }(
             taking<Int>(80)(
             customTransducer<Int>()(
-            ::toListt)
+            ::toList
+            )
         )))))})
+
+    listOf(1,2).transduce(mutableListOf<Int>(), TransducerContext2<MutableList<Int>,Int>{
+        testtt()
+    })*/
+
+    val res2 = listOf("123", "456", "78")
+        .transduceWithLazyLoadedChain(mutableListOf()) { ctx: TransducerContext2<MutableList<Int>,String> -> with(ctx) {
+            mapFlatting { el: String -> el.toList() }(
+            mapping { el: Char -> el.toInt() }(
+            mapFlatting { el: Int -> IntRange(0, el * 10) }(
+            filtering { el: Int -> el % 2 == 0 }(
+            taking<Int>(80)(
+            customTransducer<Int>()(
+            ::toList
+        ))))))}}
 
     val expected2 = listOf("123", "456", "78")
         .flatMap { it.toList() }
@@ -61,7 +86,7 @@ fun main() {
         .filter { it % 2 == 0 }
         .take(80)
 
-    println("Hooray! Res= ${res}")
+    //println("Hooray! Res= ${res}")
     println("""
         Actual Res2: ${res2}
         Exprected:   ${expected2}
