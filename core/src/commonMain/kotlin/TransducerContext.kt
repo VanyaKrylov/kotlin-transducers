@@ -80,7 +80,7 @@ class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially 
     }
 }
 
-class TransducerContext2<Recv,In> {//@SuperInline constructor(@SuperInline val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
+class TransducerContext2<Recv> {//@SuperInline constructor(@SuperInline val chain: TransducerContext2<Recv,In>.() -> Reducer<Recv,In>) {
     var exit: Boolean = false
 
     inline fun <T_in,T_out> mapping(crossinline f: (T_out) -> T_in): Transducer<Recv,T_in,T_out> =
@@ -143,8 +143,8 @@ class TransducerContext2<Recv,In> {//@SuperInline constructor(@SuperInline val c
     return initial
 }*/
 
-inline fun <In,Recv> List<In>.transduceWithLazyLoadedChain(initial: Recv, operatorChainSupplier: (TransducerContext2<Recv,In>) -> Reducer<Recv,In>): Recv {
-    val ctx = TransducerContext2<Recv,In>()
+inline fun <In,Recv> List<In>.transduceWithLazyLoadedChain(initial: Recv, operatorChainSupplier: (TransducerContext2<Recv>) -> Reducer<Recv,In>): Recv {
+    val ctx = TransducerContext2<Recv>()
     val operatorChainReducer = operatorChainSupplier(ctx)
     for (e in this) {
         if (ctx.exit) break

@@ -1,6 +1,6 @@
 val conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
 
-fun <In> TransducerContext2<MutableList<Int>,String>.customTransducer(): Transducer<MutableList<Int>,In,In> =
+fun <In> TransducerContext2<MutableList<Int>>.customTransducer(): Transducer<MutableList<Int>,In,In> =
     { step: Reducer<MutableList<Int>,In> ->
         { acc: MutableList<Int>, el: In ->
             exit = true
@@ -14,7 +14,7 @@ fun <In> customTransducer(): Transducer<MutableList<Int>,In,In> =
         }}
 
 
-fun TransducerContext2<MutableList<Int>,Int>.testtt() = customTransducer<Int>().invoke() { a, b -> toList(a, b)}
+fun TransducerContext2<MutableList<Int>>.testtt() = customTransducer<Int>().invoke() { a, b -> toList(a, b)}
 
 fun main() {
     val list = listOf(1, 2, 3)
@@ -69,7 +69,7 @@ fun main() {
     })*/
 
     val res2 = listOf("123", "456", "78")
-        .transduceWithLazyLoadedChain(mutableListOf()) { ctx: TransducerContext2<MutableList<Int>,String> -> with(ctx) {
+        .transduceWithLazyLoadedChain(mutableListOf()) { ctx: TransducerContext2<MutableList<Int>> -> with(ctx) {
             mapFlatting { el: String -> el.toList() }(
             mapping { el: Char -> el.toInt() }(
             mapFlatting { el: Int -> IntRange(0, el * 10) }(
