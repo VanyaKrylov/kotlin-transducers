@@ -1,4 +1,5 @@
 val conjLambda = {a: MutableList<Int>, b: Int -> conj(a, b) }
+val conjLambda2 = {a: MutableList<String>, b: String -> conj(a, b) }
 
 fun <In> TransducerContext2<MutableList<Int>>.customTransducer(): Transducer<MutableList<Int>,In,In> =
     { step: Reducer<MutableList<Int>,In> ->
@@ -15,6 +16,10 @@ fun <In> customTransducer(): Transducer<MutableList<Int>,In,In> =
 
 
 fun TransducerContext2<MutableList<Int>>.testtt() = customTransducer<Int>().invoke() { a, b -> toList(a, b)}
+
+interface Foo {
+    fun foo()
+}
 
 fun main() {
     val list = listOf(1, 2, 3)
@@ -68,8 +73,12 @@ fun main() {
         testtt()
     })*/
 
+  /*  listOf(1,2).transduce(mutableListOf()) { ctx: TransducerContext2<MutableList<Int>> -> with(ctx) {
+        testtt()
+    } }*/
+
     val res2 = listOf("123", "456", "78")
-        .transduceWithLazyLoadedChain(mutableListOf()) { ctx: TransducerContext2<MutableList<Int>> -> with(ctx) {
+        .transduce(mutableListOf<Int>()) {
             mapFlatting { el: String -> el.toList() }(
             mapping { el: Char -> el.toInt() }(
             mapFlatting { el: Int -> IntRange(0, el * 10) }(
@@ -77,7 +86,31 @@ fun main() {
             taking<Int>(80)(
             customTransducer<Int>()(
             ::toList
-        ))))))}}
+        ))))))}
+
+    val res = listOf("123", "456", "78")
+        .transduce(mutableListOf<Int>()) {(
+                +mapFlatting<String,Char> { it.toList() }
+                +mapping { el: Char -> el.toInt() }
+                +mapFlatting { el: Int -> IntRange(0, el * 10) }
+                +filtering { el: Int -> el % 2 == 0 }
+                +taking(10)
+                +::toList
+            )}
+
+    val res3 = listOf("123", "456", "78")
+        .transduce<String,Int> {(
+                +mapFlatting { el:String -> el.toList() }
+                +mapping { el: Char -> el.toInt() }
+                +mapFlatting { el: Int -> IntRange(0, el * 10) }
+                +filtering { el: Int -> el % 2 == 0 }
+                +taking(8))
+        }
+
+    val expected = listOf(1,2,3)
+        .map { it.showDoubledString()}
+        .filter { it.startsWith("1") }
+        .take(3)
 
     val expected2 = listOf("123", "456", "78")
         .flatMap { it.toList() }
@@ -86,10 +119,141 @@ fun main() {
         .filter { it % 2 == 0 }
         .take(80)
 
+    val short = listOf(1,2,3)
+        .transduce4<Int,Int> {
+            { arg: Reducer<MutableList<Int>, Int> ->
+                mapping<Int,Int> { it * 2 }(
+                mapFlatting { el: Int -> el .. 10 }(
+                taking<Int>(18)(arg)
+                ))}
+    }.count()
+
+    val expectedShort = listOf(1,2,3)
+        .map { it * 2 }
+
+    var v = 2
+    var vv = 1
+    var vvv = 3
+    var v2 = 2
+    var vv2 = 1
+    var vvv2 = 3
+
+    fun bar(arg: Foo) = arg.foo()
+
+    val longer = (1..100).toMutableList()
+        .transduce4<Int,Int> {(
+                +mapping<Int,Int> {
+                    v = it * 2
+                    vv *= it * 2
+                    bar(object : Foo {
+                        override fun foo() {
+                            vv /= it * 2
+                        }
+
+                    })
+                    it + 2
+                }
+                +filtering { it > 3 }
+                +mapping { it.toString() }
+                +mapFlatting { it.toList() }
+                +mapping { el: Char -> el.toInt() }
+                +mapFlatting { el: Int -> IntRange(0, el * 10) }
+                +filtering { el: Int -> el % 2 == 0 }
+                +taking(90)
+                +mapping { it * 2}
+                +mapFlatting {
+                    bar(object : Foo {
+                        override fun foo() {
+                            vvv += it * 2
+                        }
+                    })
+
+                    v = it * it
+                    vv *= v
+
+                    listOf(it)
+                }
+                +taking(90)
+        )}
+
+    val stdLonger = (1..100).toMutableList()
+        .map {
+            v2 = it * 2
+            vv2 *= it * 2
+            bar(object : Foo {
+                override fun foo() {
+                    vv2 /= it * 2
+                }
+
+            })
+            it + 2
+        }
+        .filter { it > 3 }
+        .map { it.toString() }
+        .flatMap { it.toList() }
+        .map { el: Char -> el.toInt() }
+        .flatMap { el: Int -> IntRange(0, el * 10) }
+        .filter { el: Int -> el % 2 == 0 }
+        .take(90)
+        .map { it * 2 }
+        .flatMap {
+            bar(object : Foo {
+                override fun foo() {
+                    vvv2 += it * 2
+                }
+            })
+
+            v2 = it * it
+            vv2 *= v2
+
+            listOf(it)
+        }
+        .take(90)
+
+    println("""
+        [!!!] ${longer}, v=${v} vv =${vv} vvv = ${vvv}        
+        [!!!] ${stdLonger}, v2=${v2} vv2 =${vv2} vvv2 = ${vvv2}        
+    """.trimIndent())
+
+    val new = listOf("123", "456", "789")
+        .transduce<String, Int> { (
+                +mapFlatting { s: String -> s.toList() }
+                +mapping { el: Char -> el.toInt() }
+                +filtering { el: Int -> el > 51 }
+        ) }
+
+    println("NEW [!_!_!]: ${new}")
+
+    val sum: Reducer<Int, Int> = { acc: Int, el: Int -> acc + el }
+
+    val summ = (1..100).toMutableList()
+        .transduce(0) {(
+                (+mapping<Int, Int> { it * 2 }){ acc: Int, el: Int -> acc + el }
+//        +filtering { it < 10 }
+
+     )}
+
+    val summm = (1..100).toMutableList()
+        .map { it * 2 }
+        .sum()
+
+    println("""
+        <==================>
+        ${summ}
+        ${summm}
+        <==================>
+    """.trimIndent())
+
     //println("Hooray! Res= ${res}")
     println("""
         Actual Res2: ${res2}
-        Exprected:   ${expected2}
+        [!] Exprected:   ${expected2}
+        [!] Actual res:  ${res}
+        [!] New (res3):  ${res3}
+        Expected:    ${expected}
+        
+        Short:         ${short}
+        Expected short:${expectedShort}
     """.trimIndent())
 
     val transducerChain = transducerContext.ctx {
