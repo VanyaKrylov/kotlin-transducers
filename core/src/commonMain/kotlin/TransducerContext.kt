@@ -126,10 +126,20 @@ class TransducerContext2<Recv> {//@SuperInline constructor(@SuperInline val chai
         return { step: Reducer<Recv,T_in> ->
             { acc: Recv, arg: T_out ->
                 for (e in f(arg)) {
-                    if (exit) break
                     step(acc, e)
+                    if (exit) break
                 }
                 acc }}
+    }
+
+    inline fun <T_out, V> zipping(list: Iterable<V>): Transducer<Recv, Pair<T_out, V>, T_out> {
+        val iter = list.iterator()
+
+        return { step: Reducer<Recv, Pair<T_out, V>> ->
+            { acc:Recv, arg: T_out ->
+                step(acc, arg to iter.next().also { if (!iter.hasNext()) exit = true })
+            }
+        }
     }
     
     inline infix operator fun <T_in,T_out,T_in2> Transducer<Recv,T_in,T_out>.plus(crossinline t: Transducer<Recv,T_in2,T_in>): Transducer<Recv,T_in2,T_out> =

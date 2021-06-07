@@ -160,7 +160,9 @@ fun main() {
                 +mapFlatting { el: Int -> IntRange(0, el * 10) }
                 +filtering { el: Int -> el % 2 == 0 }
                 +taking(90)
-                +mapping { it * 2}
+                +mapping { it * 2 }
+                +zipping(listOf(42,432,5432))
+                +mapping { it.first }
                 +mapFlatting {
                     bar(object : Foo {
                         override fun foo() {
@@ -196,6 +198,8 @@ fun main() {
         .filter { el: Int -> el % 2 == 0 }
         .take(90)
         .map { it * 2 }
+        .zip(listOf(42,432,5432))
+        .map { it.first }
         .flatMap {
             bar(object : Foo {
                 override fun foo() {
@@ -242,6 +246,23 @@ fun main() {
         ${summ}
         ${summm}
         <==================>
+    """.trimIndent())
+
+    val z = (1..10).toMutableList()
+        .transduce4<Int,Int> {(
+                +zipping<Int,Int>(listOf(42,432,5432))
+                +mapping { it.first }
+        )}
+
+    val zz = (1..10).toMutableList()
+        .zip(listOf(42,432,5432))
+        .map { it.first }
+
+    println("""
+        ZIIIIIIP
+        z =  ${z}
+        zz = ${zz}
+        ZIIIIIIP
     """.trimIndent())
 
     //println("Hooray! Res= ${res}")
