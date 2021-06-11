@@ -137,7 +137,10 @@ class TransducerContext2<Recv> {//@SuperInline constructor(@SuperInline val chai
 
         return { step: Reducer<Recv, Pair<T_out, V>> ->
             { acc:Recv, arg: T_out ->
-                step(acc, arg to iter.next().also { if (!iter.hasNext()) exit = true })
+                if (iter.hasNext())
+                    step(acc, arg to iter.next())
+                else
+                    acc
             }
         }
     }
@@ -213,8 +216,9 @@ inline fun <Out,In> List<Out>.transduce4(
 }
 
 @SuperInline inline fun <Out, In> List<Out>.transduce5(
-    initial: In, operatorChain: TransducerContext2<In>.() -> Reducer<In, Out>)
-        : In {
+    initial: In,
+    operatorChain: TransducerContext2<In>.() -> Reducer<In, Out>
+): In {
     val ctx = TransducerContext2<In>()
     val res = _transduce(initial, this, ctx, ctx.operatorChain())
 
@@ -222,6 +226,64 @@ inline fun <Out,In> List<Out>.transduce4(
 }
 
 inline fun <Recv> toList(acc: MutableList<Recv>, v: Recv) = acc.apply { this.add(v) }
+
+inline fun <Out, In> List<Out>.lazyTransduce(
+    operatorChain: TransducerContext2<MutableList<In>>.() -> Transducer<MutableList<In>, In, Out>
+): Iterable<In> {
+    val ctx = TransducerContext2<MutableList<In>>()
+    val reducer = ctx.operatorChain().invoke { a, b -> conj(a, b)}
+
+    return LazyIterable( this, ctx, reducer)
+}
+
+class LazyIterable<In, Out>(
+    val backingData: Iterable<In>,
+    val ctx: TransducerContext2<MutableList<Out>>,
+    val reducer: Reducer<MutableList<Out>, In>
+) : Iterable<Out> {
+    override fun iterator(): Iterator<Out> {
+        return LazyIterator()
+    }
+
+    inner class LazyIterator : Iterator<Out> {
+        private val backingDataIterator = backingData.iterator()
+        private val acc = mutableListOf<Out>()
+        private var _nextElement: Out? = null //nextElement
+        private inline val nextElement
+            get() = run {
+                val size = acc.size
+                while (backingDataIterator.hasNext() && size == acc.size) {
+                    reducer(acc, backingDataIterator.next())
+                }
+
+                return@run if (size != acc.size)
+                    acc.last()
+                else
+                    null
+
+            }
+
+        override fun hasNext(): Boolean {
+            if (_nextElement == null)
+                _nextElement = nextElement
+
+            return !ctx.exit && _nextElement != null
+        }
+
+        override fun next(): Out {
+            val next: Out  = (
+                    if (_nextElement == null)
+                        nextElement
+                    else
+                        _nextElement
+                    )
+                ?: throw NoSuchElementException()
+
+            return next.also { _nextElement = null }
+        }
+    }
+
+}
 
 fun <R,T> reduce(arr: Collection<T>, f: (R?,T) -> R): R {
     var acc: R? = null
@@ -272,3 +334,17 @@ fun Int.showDoubledString() = (this * this).toString()
 *
 * */
 
+typealias ReducerF<Acc, El> = (Pair<Acc, El>?) -> Acc
+typealias StreamF<Acc, El> = (ReducerF<Acc, El>) -> Acc
+
+fun <A, B> mapF(f: (A) -> B, str: StreamF<*, A>): StreamF<*, B> =
+    { folder: ReducerF<*, B> ->
+        str { x: Pair<*, A>? ->
+            when (x) {
+                is Pair<*, A> -> folder(x.first to f(x.second))
+                else -> folder(null)
+            }
+        }
+}
+
+//fun <El> filterF(pred: (El) -> Boolean, str: StreamF<*, El>): StreamF<*, El>
