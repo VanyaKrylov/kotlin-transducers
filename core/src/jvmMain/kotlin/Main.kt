@@ -161,13 +161,15 @@ fun main() {
                 +filtering { el: Int -> el % 2 == 0 }
                 +taking(9)
                 +mapping { it * 2 }
-                +zipping((1..10).toMutableList().lazyTransduce<Int, Int> {(
+                +zipping((1..100).toMutableList().lazyTransduce<Int, Int> {(
                         +mapping<Int, Int> {
-                            println("INSIDE ZIP: ${it}")
+                            println("[T]INSIDE ZIP: ${it}")
                             it * it
                         }
+                        +filtering { it > 50 }
+                        +taking(10)
                 )})
-                +mapping { it.first }
+                +mapping { it.second }
                 +mapFlatting {
                     bar(object : Foo {
                         override fun foo() {
@@ -204,13 +206,15 @@ fun main() {
         .filter { el: Int -> el % 2 == 0 }
         .take(9)
         .map { it * 2 }
-        .zip((1 .. 10)
+        .zip((1 .. 100)
             .asSequence()
             .map {
                 println("INSIDE ZIP: ${it}")
                 it * it
-            })
-        .map { it.first }
+            }
+            .filter { it > 50 }
+            .take(10))
+        .map { it.second }
         .flatMap {
             bar(object : Foo {
                 override fun foo() {
@@ -241,6 +245,7 @@ fun main() {
     println("NEW [!_!_!]: ${new}")
 
     val sum: Reducer<Int, Int> = { acc: Int, el: Int -> acc + el }
+    val sumL: Reducer<Long, Long> = { a: Long, b: Long -> a + b }
 
     val summ = (1..100).toMutableList()
         .transduce(0) {(
@@ -310,6 +315,21 @@ fun main() {
     while (iter.hasNext()) {
         println("Lazy: ${iter.next()}")
     }
+
+    val vs = (0..10000000).map { (it % 10).toLong() }.dropLast(1).toMutableList()
+    val vlo = (0..10).map { (it % 10).toLong() }.dropLast(1).toMutableList()
+
+    val cart = vs
+        .transduce(0L) {
+            (mapFlatting<Long, Long> { d: Long -> vlo.transduce4 { mapping { it * d } } })(sumL)
+        }
+
+    val cartt = vs
+        .flatMap { d -> vlo.map { it * d } }
+        .sum()
+
+    println("Cart: ${cart}")
+    println("Cartt: ${cartt}")
 
     /*
     val transCtx = TransducerContext<MutableList<Int>, Iterable<Int>, Int> { a, b -> conj(a, b) }

@@ -125,11 +125,12 @@ class TransducerContext2<Recv> {//@SuperInline constructor(@SuperInline val chai
     inline fun <T_out,T_in> mapFlatting(crossinline f: (T_out) -> Iterable<T_in>): Transducer<Recv,T_in,T_out> {
         return { step: Reducer<Recv,T_in> ->
             { acc: Recv, arg: T_out ->
+                var acc_ = acc
                 for (e in f(arg)) {
-                    step(acc, e)
+                    acc_ = step(acc_, e)
                     if (exit) break
                 }
-                acc }}
+                acc_ }}
     }
 
     inline fun <T_out, V> zipping(list: Iterable<V>): Transducer<Recv, Pair<T_out, V>, T_out> {
@@ -198,12 +199,13 @@ inline fun <Out,In> List<Out>.transduce(operatorChain: TransducerContext2<Mutabl
 inline fun <Out, In> _transduce(
     initial: In, dataset: List<Out>, ctx: TransducerContext2<In>, reducer: Reducer<In, Out>)
 : In {
+    var res = initial
     for (e in dataset) {
         if (ctx.exit) break
-        reducer(initial, e)
+        res = reducer(res, e)
     }
 
-    return initial
+    return res
 }
 
 inline fun <Out,In> List<Out>.transduce4(
