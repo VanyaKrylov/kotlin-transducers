@@ -320,15 +320,16 @@ fun main() {
     val vlo = (0..10).map { (it % 10).toLong() }.dropLast(1).toMutableList()
 
     val cart = vs
-        .transduce(0L) {
-            (mapFlatting<Long, Long> { d: Long -> vlo.transduce4 { mapping { it * d } } })(sumL)
-        }
+        .transduce5(0L) {((
+        mapFlatting<Long, Long> { d: Long -> vlo.transduce4 { mapping { it * d } } })
+        { a: Long, b: Long -> a + b }
+        )}
 
     val cartt = vs
         .flatMap { d -> vlo.map { it * d } }
         .sum()
 
-    println("Cart: ${cart}")
+    println("Cart:  ${cart}")
     println("Cartt: ${cartt}")
 
     /*

@@ -1,7 +1,6 @@
 typealias Reducer<T,R> = (T, R) -> T
 typealias Transducer<Acc,T_in,T_out> = (Reducer<Acc,T_in>) -> Reducer<Acc,T_out>
 
-//@Retention(AnnotationRetention.BINARY)
 annotation class SuperInline
 
 class TransducerContext<Recv,In,Out>(var step: Reducer<Recv,Out>) { //initially step is the terminating reduce function of the chain
@@ -125,12 +124,12 @@ class TransducerContext2<Recv> {//@SuperInline constructor(@SuperInline val chai
     inline fun <T_out,T_in> mapFlatting(crossinline f: (T_out) -> Iterable<T_in>): Transducer<Recv,T_in,T_out> {
         return { step: Reducer<Recv,T_in> ->
             { acc: Recv, arg: T_out ->
-                var acc_ = acc
+                var _acc = acc
                 for (e in f(arg)) {
-                    acc_ = step(acc_, e)
+                    _acc = step(_acc, e)
                     if (exit) break
                 }
-                acc_ }}
+                _acc }}
     }
 
     inline fun <T_out, V> zipping(list: Iterable<V>): Transducer<Recv, Pair<T_out, V>, T_out> {
