@@ -316,21 +316,91 @@ fun main() {
         println("Lazy: ${iter.next()}")
     }
 
-    val vs = (0..10000000).map { (it % 10).toLong() }.dropLast(1).toMutableList()
-    val vlo = (0..10).map { (it % 10).toLong() }.dropLast(1).toMutableList()
+    val vHi = (0..10000000).map { (it % 10).toLong() }.dropLast(1).toMutableList()
+    val vLo = (0..10).map { (it % 10).toLong() }.dropLast(1).toMutableList()
 
-    val cart = vs
+    val cart = vHi
         .transduce5(0L) {((
-        mapFlatting<Long, Long> { d: Long -> vlo.transduce4 { mapping { it * d } } })
+        +mapFlatting<Long, Long> { d: Long -> vLo.transduce4 { mapping { it * d } } })
         { a: Long, b: Long -> a + b }
         )}
 
-    val cartt = vs
-        .flatMap { d -> vlo.map { it * d } }
+    val cartt = vHi
+        .flatMap { d -> vLo.map { it * d } }
         .sum()
+
 
     println("Cart:  ${cart}")
     println("Cartt: ${cartt}")
+
+    val flatMapTake = vHi
+        .transduce5(0L) {((
+        +mapFlatting<Long, Long> { d: Long -> vLo.transduce4 { mapping { it * d } } }
+        +taking(20000000))
+        { a: Long, b: Long -> a + b }
+    )}
+
+    val flatMapTakee = vHi
+        .flatMap { d -> vLo.map { it * d } }
+        .take(20000000)
+        .sum()
+
+    println("""
+        1) ${flatMapTake}
+        2) ${flatMapTakee}
+    """.trimIndent())
+
+    val dotProduct = vHi.transduce5(0L) {(
+            (+zipping(vHi) { a: Long, b: Long -> (a * b) } )
+            { a: Long, b: Long -> a + b }
+    )}
+
+    val dotProductt = vHi
+        .zip(vHi) { a, b -> a * b }
+        .sum()
+
+    println("""
+        dotProduct
+        1) ${dotProduct}
+        2) ${dotProductt}
+    """.trimIndent())
+
+    val vFaZ = (0L..10000L).toMutableList().dropLast(1)
+
+    val flatMapAfterZip = vFaZ.transduce5(0L) {((
+            +zipping(vFaZ) { a: Long, b: Long -> (a + b) }
+            +mapFlatting<Long, Long> { d: Long -> vFaZ.transduce4 { mapping { it + d } } })
+            { a: Long, b: Long -> a + b }
+            )}
+
+    val flatMapAfterZipp = vFaZ
+        .zip(vFaZ) { a, b -> a + b }
+        .flatMap { d -> vFaZ.map { it + d } }
+        .sum()
+
+    println("""
+        flatMapAfterZip
+        1) ${flatMapAfterZip}
+        2) ${flatMapAfterZipp}
+    """.trimIndent())
+
+    val vZaF = (0L..1000L).toMutableList().dropLast(1)
+
+    val zipAfterFlatMap = vZaF.transduce5(0L) {((
+            +mapFlatting<Long, Long> { d -> vZaF.transduce4 { mapping { it + d } } }
+            +zipping(vZaF) { a: Long, b: Long -> a + b })
+            { a, b -> a + b })}
+
+    val zipAfterFlatMapp = vZaF
+        .flatMap { d -> vZaF.map { it + d } }
+        .zip(vZaF) { a, b -> a + b }
+        .sum()
+
+    println("""
+        zipAfterFlatMap
+        1) ${zipAfterFlatMap}
+        2) ${zipAfterFlatMapp}
+    """.trimIndent())
 
     /*
     val transCtx = TransducerContext<MutableList<Int>, Iterable<Int>, Int> { a, b -> conj(a, b) }
