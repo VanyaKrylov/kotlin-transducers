@@ -301,15 +301,21 @@ class LazyIterable<In, Out>(
         private val backingDataIterator = backingData.iterator()
         private val acc = mutableListOf<Out>()
         private var _nextElement: Out? = null //nextElement
+        private var accPointer: Int = 0
         private inline val nextElement
             get() = run {
-                val size = acc.size
-                while (backingDataIterator.hasNext() && size == acc.size) {
+                if (accPointer < acc.size) {
+                    return@run acc[accPointer].also { accPointer++ }
+                }
+
+                accPointer = acc.size
+
+                while (backingDataIterator.hasNext() && !ctx.exit && accPointer == acc.size) {
                     reducer(acc, backingDataIterator.next())
                 }
 
-                return@run if (size != acc.size)
-                    acc.last()
+                return@run if (accPointer != acc.size)
+                    acc[accPointer].also { accPointer++ }
                 else
                     null
 

@@ -386,20 +386,45 @@ fun main() {
 
     val vZaF = (0L..1000L).toMutableList().dropLast(1)
 
-    val zipAfterFlatMap = vZaF.transduce5(0L) {((
-            +mapFlatting<Long, Long> { d -> vZaF.transduce4 { mapping { it + d } } }
-            +zipping(vZaF) { a: Long, b: Long -> a + b })
-            { a, b -> a + b })}
+    val zipAfterFlatMap = vZaF
+        .transduce5(0L) {((
+        +mapFlatting2<Long, Long> { d -> vZaF.fuser { +mapping<Long, Long> { it + d } } }
+        +zipping(vZaF) { a: Long, b: Long -> a + b })
+        { a, b -> a + b })}
 
     val zipAfterFlatMapp = vZaF
+        .asSequence()
         .flatMap { d -> vZaF.map { it + d } }
-        .zip(vZaF) { a, b -> a + b }
+        .zip(vZaF.asSequence()) { a, b -> a + b }
         .sum()
 
     println("""
         zipAfterFlatMap
         1) ${zipAfterFlatMap}
         2) ${zipAfterFlatMapp}
+    """.trimIndent())
+
+    val v_ = (0L..100000000L).map { it % 10 }.dropLast(1)
+    val zipFlatFlat = v_.transduce5(0L) {((
+            +mapFlatting2<Long, Long> { d -> vLo.fuser { +mapping<Long, Long> { it + d } } }
+            +zipping(vLo.transduce4 { +mapFlatting2<Long, Long> { d -> v_.fuser { +mapping<Long, Long> { it + d } } } }) {
+                    a: Long, b: Long -> a + b
+            }
+            +taking(20000000))
+            { a, b -> a + b })}
+
+    val zipFlatFlatt = v_.asSequence()
+        .flatMap { d -> vLo.map { it + d } }
+        .zip(vLo.asSequence().flatMap { d -> v_.map { it + d } }) {
+                a, b -> a + b
+        }
+        .take(20000000)
+        .sum()
+
+    println("""
+        zipFlatFlat
+        1) ${zipFlatFlat}
+        2) ${zipFlatFlatt}
     """.trimIndent())
 
     /*
